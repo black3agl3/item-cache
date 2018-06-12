@@ -1,4 +1,6 @@
-const {protocol} = require('tera-data-parser')
+const HOOK_LAST = {order: 100, filter: {fake: null}}
+
+const Long = require('long')
 
 module.exports = function ItemCache(dispatch) {
 	let gameId = null,
@@ -13,7 +15,7 @@ module.exports = function ItemCache(dispatch) {
 		delete ware[9] // Pet bank
 	})
 
-	dispatch.hook('S_INVEN', 'raw', {order: 100, filter: {fake: null}}, (code, data) => {
+	dispatch.hook('S_INVEN', 'raw', HOOK_LAST, (code, data) => {
 		if(lock) return
 
 		if(data[25]) invenNew = [] // Check first flag
@@ -28,7 +30,7 @@ module.exports = function ItemCache(dispatch) {
 		}
 	})
 
-	dispatch.hook('C_SHOW_INVEN', 1, {order: 100, filter: {fake: null}}, event => {
+	dispatch.hook('C_SHOW_INVEN', 1, HOOK_LAST, event => {
 		if(event.unk !== 1) return // Type?
 
 		lock = true
@@ -36,29 +38,39 @@ module.exports = function ItemCache(dispatch) {
 		return lock = false
 	})
 
-	dispatch.hook('S_VIEW_WARE_EX', 1, {order: 100, filter: {fake: null}}, event => {
-		if(lock || ![1, 9, 12].includes(event.type) || event.action) return
+	dispatch.hook('S_VIEW_WARE_EX', 'raw', HOOK_LAST, (code, data) => {
+		if(lock) return
 
-		if(!ware[event.type]) ware[event.type] = {}
+		const event = {
+			gameId: new Long(data.readInt32LE(8), data.readInt32LE(12), true),
+			type: data.readInt32LE(16),
+			action: data.readInt32LE(20),
+			offset: data.readInt32LE(24)
+		}
+
+		if(!event.gameId.equals(gameId) || event.action) return
+
+		let wareType = ware[event.type]
+
+		if(!wareType) wareType = ware[event.type] = {}
 		else
-			for(let page of Object.values(ware[event.type])) // Update global information for each page
-				Object.assign(page, {
-					lastUsedSlot: event.lastUsedSlot,
-					slotsUsed: event.slotsUsed,
-					gold: event.gold,
-					slots: event.slots
-				})
+			for(let page of Object.values(wareType)) { // Update global information for each page
+				data.copy(page, 8, 8, 20)
+				data.copy(page, 28, 28, 46)
+			}
 
-		ware[event.type][event.offset] = event
+		wareType[event.offset] = Buffer.from(data)
 	})
 
-	dispatch.hook('C_VIEW_WARE', 2, {order: 100, filter: {fake: null}}, event => {
+	dispatch.hook('C_VIEW_WARE', 2, HOOK_LAST, event => {
 		if(!event.gameId.equals(gameId)) return
 
-		if(ware[event.type] && ware[event.type][event.offset]) {
+		const wareType = ware[event.type]
+
+		if(wareType && wareType[event.offset]) {
 			lock = true
-			dispatch.toClient('S_VIEW_WARE_EX', 1, ware[event.type][event.offset])
-			return lock = false
+			dispatch.toClient(wareType[event.offset]) // Pre-send the requested page
+			lock = false
 		}
 	})
 }
