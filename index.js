@@ -5,8 +5,7 @@ module.exports = function ItemCache(dispatch) {
 		lock = false,
 		inven = null,
 		invenNew = null,
-		ware = {},
-		lastWareReq = null
+		ware = {}
 
 	dispatch.hook('S_LOGIN', 10, event => {
 		({gameId} = event)
@@ -30,11 +29,11 @@ module.exports = function ItemCache(dispatch) {
 	})
 
 	dispatch.hook('C_SHOW_INVEN', 1, {order: 100, filter: {fake: null}}, event => {
-		if(event.unk === 1) { // Type?
-			lock = true
-			for(let data of inven) dispatch.toClient(data)
-			return lock = false
-		}
+		if(event.unk !== 1) return // Type?
+
+		lock = true
+		for(let data of inven) dispatch.toClient(data)
+		return lock = false
 	})
 
 	dispatch.hook('S_VIEW_WARE_EX', 1, {order: 100, filter: {fake: null}}, event => {
@@ -54,17 +53,12 @@ module.exports = function ItemCache(dispatch) {
 	})
 
 	dispatch.hook('C_VIEW_WARE', 2, {order: 100, filter: {fake: null}}, event => {
-		if(event.gameId.equals(gameId)) {
-			// Block the client from sending duplicate page requests
-			if(lastWareReq && event.type === lastWareReq.type && event.offset === lastWareReq.offset) return false
+		if(!event.gameId.equals(gameId)) return
 
-			lastWareReq = event
-
-			if(ware[event.type] && ware[event.type][event.offset]) {
-				lock = true
-				dispatch.toClient('S_VIEW_WARE_EX', 1, ware[event.type][event.offset])
-				return lock = false
-			}
+		if(ware[event.type] && ware[event.type][event.offset]) {
+			lock = true
+			dispatch.toClient('S_VIEW_WARE_EX', 1, ware[event.type][event.offset])
+			return lock = false
 		}
 	})
 }
