@@ -42,13 +42,13 @@ module.exports = function ItemCache(dispatch) {
 		if(lock) return
 
 		const event = {
-			gameId: new Long(data.readInt32LE(8), data.readInt32LE(12), true),
+			gameId: BigInt(data.readUInt32LE(8)) | BigInt(data.readUInt32LE(12)) << 32n,
 			type: data.readInt32LE(16),
 			action: data.readInt32LE(20),
 			offset: data.readInt32LE(24)
 		}
 
-		if(!event.gameId.equals(gameId) || event.action) return
+		if(event.gameId !== gameId || event.action) return
 
 		let wareType = ware[event.type]
 
@@ -63,7 +63,7 @@ module.exports = function ItemCache(dispatch) {
 	})
 
 	dispatch.hook('C_VIEW_WARE', 2, HOOK_LAST, event => {
-		if(!event.gameId.equals(gameId)) return
+		if(event.gameId !== gameId) return
 
 		const wareType = ware[event.type]
 
