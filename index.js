@@ -1,7 +1,5 @@
 const HOOK_LAST = {order: 100, filter: {fake: null}}
 
-const Long = require('long')
-
 module.exports = function ItemCache(dispatch) {
 	let gameId = null,
 		lock = false,
