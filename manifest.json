@@ -1,0 +1,14 @@
+{
+	"files": {
+		"README.md": "3267440dff24033c5d87096a1fa187540d60040582381f45dac9fbbe4d4a3aed",
+		"index.js": "860dd3570431ce7dcb3c60e6188a6071ad60c3e3517c0448d931dc1124ce94cf",
+		"module.json": "4b13939b0a377e52b58b0bb0ae533392c42b4f1c4207c34e1d121c39a848ada1"
+	},
+	"defs": {
+		"C_SHOW_INVEN": 1,
+		"C_VIEW_WARE": 2,
+		"S_INVEN": "raw",
+		"S_LOGIN": 10,
+		"S_VIEW_WARE_EX": "raw"
+	}
+}
